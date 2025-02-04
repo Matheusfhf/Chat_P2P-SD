@@ -49,10 +49,16 @@ def handle_peer_connection(peer_socket):
     try:
         username = peer_socket.recv(1024).decode('utf-8')
         usernames[peer_socket] = username
-        join_message = f"{username} has joined the chat!\n".encode('utf-8')
+        join_message = f"Nova conexão recebida.".encode('utf-8')
         print(join_message.decode('utf-8'), end="")
         broadcast_message(join_message, sender_socket=peer_socket)
-
+        chat_box.config(state=tk.NORMAL)
+        if ":" in username:
+            chat_box.insert(tk.END, f"{username}")
+        else:
+            chat_box.insert(tk.END, f"Nova conexão recebida.\n")
+        chat_box.config(state=tk.DISABLED)
+        message_entry.delete(0, tk.END)
         while True:
             message = peer_socket.recv(1024).decode('utf-8')
             if not message:
@@ -63,7 +69,7 @@ def handle_peer_connection(peer_socket):
             else:
                 broadcast_message(message.encode('utf-8'), sender_socket=peer_socket)
                 chat_box.config(state=tk.NORMAL)
-                chat_box.insert(tk.END, f"{message}\n")
+                chat_box.insert(tk.END, f"{message}")
                 chat_box.config(state=tk.DISABLED)
                 message_entry.delete(0, tk.END)
     except:
