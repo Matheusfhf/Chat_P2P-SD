@@ -6,7 +6,7 @@ from P2P_SuperPeer import P2P_SuperPeer
 
 # Super Peer (Tracker) Configuration
 tracker_host = "127.0.0.1"
-tracker_port = 5000
+tracker_port = 55544
 
 def is_superpeer_running():
     """Check if the Super Peer is already running."""
@@ -61,8 +61,11 @@ def handle_peer_connection(peer_socket):
                 peer_list = ", ".join(usernames.values())
                 peer_socket.send(f"PONG: {peer_list}\n".encode('utf-8'))
             else:
-                print(message, end="")
                 broadcast_message(message.encode('utf-8'), sender_socket=peer_socket)
+                chat_box.config(state=tk.NORMAL)
+                chat_box.insert(tk.END, f"{message}\n")
+                chat_box.config(state=tk.DISABLED)
+                message_entry.delete(0, tk.END)
     except:
         print(f"\n{usernames.get(peer_socket, 'A peer')} has disconnected.\n", end="")
     finally:
@@ -114,9 +117,9 @@ def connect_to_selected_peer():
     selected_index = peer_listbox.curselection()
     if selected_index:
         peer_info = available_peers[selected_index[0]].split()
-        if len(peer_info) == 2:
-            peer_ip, peer_port = peer_info
-            connect_to_peer(peer_ip, int(peer_port), username)
+        if len(peer_info) == 3:
+            peer_ip, peer_port, peer_name = peer_info
+            connect_to_peer(peer_ip, int(peer_port), peer_name)
 
 def send_message():
     message = message_entry.get()
