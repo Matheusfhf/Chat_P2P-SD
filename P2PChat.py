@@ -118,13 +118,14 @@ def connect_to_selected_peer():
             peer_ip, peer_port = peer_info
             connect_to_peer(peer_ip, int(peer_port), username)
 
-# Tkinter UI
 def send_message():
     message = message_entry.get()
     if message:
         raw_message = f"{username}: {message}\n".encode('utf-8')
         broadcast_message(raw_message)
+        chat_box.config(state=tk.NORMAL)
         chat_box.insert(tk.END, f"You: {message}\n")
+        chat_box.config(state=tk.DISABLED)
         message_entry.delete(0, tk.END)
 
 def main():
@@ -135,14 +136,21 @@ def main():
     port = int(input("Enter your port (e.g., 12345): "))
 
     register_with_tracker(host, port, username)
-
     threading.Thread(target=listen_for_peers, args=(host, port), daemon=True).start()
     
-    # Tkinter UI
     root = tk.Tk()
     root.title("P2P Chat")
+    
+    info_frame = tk.Frame(root)
+    info_frame.pack()
 
-    chat_box = scrolledtext.ScrolledText(root, width=50, height=20)
+    tk.Label(info_frame, text="Username:", font=("Arial", 14, "bold")).pack(side=tk.LEFT)
+    tk.Label(info_frame, text=username, font=("Arial", 14)).pack(side=tk.LEFT)
+
+    tk.Label(info_frame, text="         Address:", font=("Arial", 14, "bold")).pack(side=tk.LEFT)
+    tk.Label(info_frame, text=f"{host}:{port}", font=("Arial", 14)).pack(side=tk.LEFT)
+
+    chat_box = scrolledtext.ScrolledText(root, width=50, height=20, state=tk.DISABLED)
     chat_box.pack()
 
     message_entry = tk.Entry(root, width=50)
