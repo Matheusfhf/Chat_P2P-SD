@@ -6,7 +6,7 @@ from P2P_SuperPeer import P2P_SuperPeer
 
 # Super Peer (Tracker) Configuration
 tracker_host = "127.0.0.1"
-tracker_port = 5000
+tracker_port = 55544
 
 def is_superpeer_running():
     """Check if the Super Peer is already running."""
@@ -49,10 +49,16 @@ def handle_peer_connection(peer_socket):
     try:
         username = peer_socket.recv(1024).decode('utf-8')
         usernames[peer_socket] = username
-        join_message = f"{username} has joined the chat!\n".encode('utf-8')
+        join_message = f"Nova conexão recebida.".encode('utf-8')
         print(join_message.decode('utf-8'), end="")
         broadcast_message(join_message, sender_socket=peer_socket)
-
+        chat_box.config(state=tk.NORMAL)
+        if ":" in username:
+            chat_box.insert(tk.END, f"{username}")
+        else:
+            chat_box.insert(tk.END, f"Nova conexão recebida.\n")
+        chat_box.config(state=tk.DISABLED)
+        message_entry.delete(0, tk.END)
         while True:
             message = peer_socket.recv(1024).decode('utf-8')
             if not message:
@@ -61,8 +67,11 @@ def handle_peer_connection(peer_socket):
                 peer_list = ", ".join(usernames.values())
                 peer_socket.send(f"PONG: {peer_list}\n".encode('utf-8'))
             else:
-                print(message, end="")
                 broadcast_message(message.encode('utf-8'), sender_socket=peer_socket)
+                chat_box.config(state=tk.NORMAL)
+                chat_box.insert(tk.END, f"{message}")
+                chat_box.config(state=tk.DISABLED)
+                message_entry.delete(0, tk.END)
     except:
         print(f"\n{usernames.get(peer_socket, 'A peer')} has disconnected.\n", end="")
     finally:
@@ -81,16 +90,31 @@ def listen_for_peers(host, port):
         peers.append(peer_socket)
         threading.Thread(target=handle_peer_connection, args=(peer_socket,), daemon=True).start()
 
+# Lista de conexões já estabelecidas
+connected_peers = set()  
+
 def connect_to_peer(peer_ip, peer_port, username):
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # Bloqueia conexão se tentar conectar a si mesmo
+    if peer_ip == host and peer_port == port:
+        print("Você não pode conectar a si mesmo!")
+        return
+    
+    # Bloqueia conexão se já estiver conectado ao mesmo peer
+    if (peer_ip, peer_port) in connected_peers:
+        print(f"Já conectado a {peer_ip}:{peer_port}. Conexão ignorada.")
+        return
+
     try:
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((peer_ip, peer_port))
         peers.append(client_socket)
+        connected_peers.add((peer_ip, peer_port))  # Adiciona a conexão à lista
         client_socket.send(username.encode('utf-8'))
         threading.Thread(target=handle_peer_connection, args=(client_socket,), daemon=True).start()
         print(f"Connected to peer at {peer_ip}:{peer_port}")
     except Exception as e:
         print(f"Failed to connect to {peer_ip}:{peer_port} - {e}")
+
 
 def check_peers():
     """Send a PING message to the super peer and list available peers."""
@@ -114,35 +138,43 @@ def connect_to_selected_peer():
     selected_index = peer_listbox.curselection()
     if selected_index:
         peer_info = available_peers[selected_index[0]].split()
-        if len(peer_info) == 2:
-            peer_ip, peer_port = peer_info
-            connect_to_peer(peer_ip, int(peer_port), username)
+        if len(peer_info) == 3:
+            peer_ip, peer_port, peer_name = peer_info
+            connect_to_peer(peer_ip, int(peer_port), peer_name)
 
-# Tkinter UI
 def send_message():
     message = message_entry.get()
     if message:
         raw_message = f"{username}: {message}\n".encode('utf-8')
         broadcast_message(raw_message)
+        chat_box.config(state=tk.NORMAL)
         chat_box.insert(tk.END, f"You: {message}\n")
+        chat_box.config(state=tk.DISABLED)
         message_entry.delete(0, tk.END)
 
 def main():
-    global username, chat_box, message_entry, peer_listbox
+    global username, chat_box, message_entry, peer_listbox, host, port
 
     username = input("Choose your username: ").strip()
     host = input("Enter your IP (e.g., 127.0.0.1): ").strip()
     port = int(input("Enter your port (e.g., 12345): "))
 
     register_with_tracker(host, port, username)
-
     threading.Thread(target=listen_for_peers, args=(host, port), daemon=True).start()
     
-    # Tkinter UI
     root = tk.Tk()
     root.title("P2P Chat")
+    
+    info_frame = tk.Frame(root)
+    info_frame.pack()
 
-    chat_box = scrolledtext.ScrolledText(root, width=50, height=20)
+    tk.Label(info_frame, text="Username:", font=("Arial", 14, "bold")).pack(side=tk.LEFT)
+    tk.Label(info_frame, text=username, font=("Arial", 14)).pack(side=tk.LEFT)
+
+    tk.Label(info_frame, text="         Address:", font=("Arial", 14, "bold")).pack(side=tk.LEFT)
+    tk.Label(info_frame, text=f"{host}:{port}", font=("Arial", 14)).pack(side=tk.LEFT)
+
+    chat_box = scrolledtext.ScrolledText(root, width=50, height=20, state=tk.DISABLED)
     chat_box.pack()
 
     message_entry = tk.Entry(root, width=50)
