@@ -84,16 +84,31 @@ def listen_for_peers(host, port):
         peers.append(peer_socket)
         threading.Thread(target=handle_peer_connection, args=(peer_socket,), daemon=True).start()
 
+# Lista de conexões já estabelecidas
+connected_peers = set()  
+
 def connect_to_peer(peer_ip, peer_port, username):
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # Bloqueia conexão se tentar conectar a si mesmo
+    if peer_ip == host and peer_port == port:
+        print("Você não pode conectar a si mesmo!")
+        return
+    
+    # Bloqueia conexão se já estiver conectado ao mesmo peer
+    if (peer_ip, peer_port) in connected_peers:
+        print(f"Já conectado a {peer_ip}:{peer_port}. Conexão ignorada.")
+        return
+
     try:
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((peer_ip, peer_port))
         peers.append(client_socket)
+        connected_peers.add((peer_ip, peer_port))  # Adiciona a conexão à lista
         client_socket.send(username.encode('utf-8'))
         threading.Thread(target=handle_peer_connection, args=(client_socket,), daemon=True).start()
         print(f"Connected to peer at {peer_ip}:{peer_port}")
     except Exception as e:
         print(f"Failed to connect to {peer_ip}:{peer_port} - {e}")
+
 
 def check_peers():
     """Send a PING message to the super peer and list available peers."""
@@ -132,7 +147,7 @@ def send_message():
         message_entry.delete(0, tk.END)
 
 def main():
-    global username, chat_box, message_entry, peer_listbox
+    global username, chat_box, message_entry, peer_listbox, host, port
 
     username = input("Choose your username: ").strip()
     host = input("Enter your IP (e.g., 127.0.0.1): ").strip()
