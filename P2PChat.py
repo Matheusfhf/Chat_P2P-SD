@@ -1,5 +1,6 @@
 import socket
 import threading
+import sys
 import tkinter as tk
 from tkinter import scrolledtext, Listbox, END
 from P2P_SuperPeer import P2P_SuperPeer
@@ -152,6 +153,18 @@ def send_message():
         chat_box.config(state=tk.DISABLED)
         message_entry.delete(0, tk.END)
 
+def exitchat(host, port, username):
+    """Register the peer with the super peer (tracker)."""
+    try:
+        tracker_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        tracker_socket.connect((tracker_host, tracker_port))
+        tracker_socket.send(f"EXITING {host} {port} {username}".encode('utf-8'))
+        tracker_socket.close()
+        sys.exit(0)
+    except Exception as e:
+        print(f"Could not register with tracker: {e}")
+
+
 def main():
     global username, chat_box, message_entry, peer_listbox, host, port
 
@@ -161,7 +174,7 @@ def main():
 
     register_with_tracker(host, port, username)
     threading.Thread(target=listen_for_peers, args=(host, port), daemon=True).start()
-    
+#cabeçalho   
     root = tk.Tk()
     root.title("P2P Chat")
     
@@ -173,24 +186,37 @@ def main():
 
     tk.Label(info_frame, text="         Address:", font=("Arial", 14, "bold")).pack(side=tk.LEFT)
     tk.Label(info_frame, text=f"{host}:{port}", font=("Arial", 14)).pack(side=tk.LEFT)
-
+#texts
     chat_box = scrolledtext.ScrolledText(root, width=50, height=20, state=tk.DISABLED)
     chat_box.pack()
 
-    message_entry = tk.Entry(root, width=50)
-    message_entry.pack()
+#enviar mensagem
+    message_frame = tk.Frame(root)
+    message_frame.pack(pady=5, fill=tk.X)
 
-    send_button = tk.Button(root, text="Send", command=send_message)
-    send_button.pack()
+    message_entry = tk.Entry(message_frame, width=40)
+    message_entry.pack(side=tk.LEFT, expand=True, padx=5, fill=tk.X)
 
-    check_peers_button = tk.Button(root, text="Check Peers", command=check_peers)
-    check_peers_button.pack()
+    send_button = tk.Button(message_frame, text="Send", command=send_message)
+    send_button.pack(side=tk.RIGHT, padx=5)
+
+#Listar Peers
 
     peer_listbox = Listbox(root, width=50, height=5)
-    peer_listbox.pack()
+    peer_listbox.pack(padx=5)
 
-    connect_button = tk.Button(root, text="Connect to Peer", command=connect_to_selected_peer)
-    connect_button.pack()
+    list_frame = tk.Frame(root)
+    list_frame.pack(pady=5, padx=5 )
+
+    check_peers_button = tk.Button(list_frame, text="Check Peers", command=check_peers)
+    check_peers_button.pack(side = tk.LEFT, padx=5)
+
+    connect_button = tk.Button(list_frame, text="Connect to Peer", command=connect_to_selected_peer)
+    connect_button.pack(side= tk.RIGHT,padx=5)
+
+#exit
+    exit_button = tk.Button(root, text="Exit", command=lambda: exitchat(host, port, username))
+    exit_button.pack(pady=5)
 
     root.mainloop()
 
