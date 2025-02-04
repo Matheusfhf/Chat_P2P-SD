@@ -24,14 +24,31 @@ class P2P_SuperPeer:
             threading.Thread(target=self.handle_peer_connection, args=(client_socket,), daemon=True).start()
 
     def handle_peer_connection(self, client_socket):
-        """Process peer registrations."""
+        """Lida com registro de peers e respostas PING."""
         try:
-            data = client_socket.recv(1024).decode('utf-8')
+            data = client_socket.recv(1024).decode('utf-8').strip()
+            
             if data.startswith("REGISTER"):
                 _, ip, port, username = data.split()
-                self.peer_list[(ip, int(port))] = username
-                print(f"Registered: {username} ({ip}:{port})")
-        except:
-            pass
+                if username in self.peer_list.values():
+                    print("Nome de usuário selecionado, tente novamente")
+                    client_socket.send("USERNAME_TAKEN".encode('utf-8'))
+                    #criar a lógica para o retorno com username taken
+                else:
+                    self.peer_list[(ip, port)] = username
+                    client_socket.send("REGISTERED".encode('utf-8'))
+
+            
+            elif data.startswith("EXITING"):
+                _, ip, port, username = data.split()
+                del self.peer_list[(ip, int(port))]
+                client_socket.send("DELETED".encode('utf-8'))
+
+            elif data == "PING":
+                peer_list_str = "\n".join([f"{ip} {port} {username}" for (ip, port), username in self.peer_list.items()])
+                client_socket.send(peer_list_str.encode('utf-8'))
+
+        except Exception as e:
+            print(f"Erro ao lidar com peer: {e}")
         finally:
             client_socket.close()
