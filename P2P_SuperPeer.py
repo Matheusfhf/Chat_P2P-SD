@@ -5,14 +5,14 @@ class P2P_SuperPeer:
     def __init__(self, host, port):
         self.host = host
         self.port = port
-        self.peer_list = {}
+        self.peer_list = {}  # { (ip, port): username }
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.start_server()
 
     def start_server(self):
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen(5)
-        print(f"Super Peer rodando em {self.host}:{self.port}...")
+        print(f"Super Peer running on {self.host}:{self.port}...")
         threading.Thread(target=self.accept_peers, daemon=True).start()
 
     def accept_peers(self):
