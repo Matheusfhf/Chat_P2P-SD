@@ -5,7 +5,7 @@ class P2P_SuperPeer:
     def __init__(self, host, port):
         self.host = host
         self.port = port
-        self.peer_list = {}  # { (ip, port): username }
+        self.peer_list = {}
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.start_server()
 
